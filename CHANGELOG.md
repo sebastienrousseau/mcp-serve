@@ -27,6 +27,7 @@ follow the `0.0.x` increment policy of the repositories it serves.
 - `run_blocking` and `DEFAULT_CALL_TIMEOUT`: the opt-in time limit for a
   tool that blocks.
 
-Extracted from the transport modules of noyalib-mcp 0.0.58, oxml-mcp
-0.0.15 and rlg-mcp 0.0.17; `MIGRATION.md` says what each server drops
-and which behaviour differences were resolved, and how.
+Extracted from the transport modules of noyalib-mcp 0.0.58 (`main`),
+oxml-mcp 0.0.16 (`feat/v0.0.16`) and rlg-mcp 0.0.18 (`feat/v0.0.18`);
+`MIGRATION.md` says what each server drops and which behaviour
+differences were resolved, and how.
