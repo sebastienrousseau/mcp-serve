@@ -1,0 +1,4 @@
+# Ceilings from ~/Code/AGENTS.md section 0.
+cognitive-complexity-threshold = 15
+too-many-lines-threshold = 60
+msrv = "1.89.0"

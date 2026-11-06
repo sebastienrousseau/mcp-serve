@@ -1,0 +1,33 @@
+# cargo-deny configuration.
+#
+# The licence list is what the resolved tree needs and nothing more:
+# `cargo deny list` over Cargo.lock, each crate's expression evaluated.
+# A new dependency under another licence fails `make deny` until it is
+# read and added here deliberately.
+
+[graph]
+all-features = true
+
+[advisories]
+yanked = "deny"
+
+[licenses]
+# The crate is dual MIT/Apache-2.0; dependencies must be compatible
+# with both, which in practice means permissive.
+allow = [
+    "Apache-2.0",
+    # matchit (axum's router) is "MIT AND BSD-3-Clause".
+    "BSD-3-Clause",
+    "MIT",
+    # unicode-ident's data tables.
+    "Unicode-3.0",
+]
+confidence-threshold = 0.93
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

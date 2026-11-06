@@ -1,0 +1,66 @@
+[package]
+name = "mcp-serve"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+description = """
+The transport half of a Rust MCP server: one command line for stdio,
+streamable HTTP and the 2024-11-05 HTTP+SSE transport, with a Host,
+Origin and Content-Type guard, a session cap, a per-line stdio cap, an
+opt-in per-call timeout and the tool-result helper.
+"""
+readme = "README.md"
+keywords = ["mcp", "rmcp", "server", "transport", "sse"]
+categories = ["network-programming", "command-line-interface"]
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+include = [
+    "/CHANGELOG.md",
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/MIGRATION.md",
+    "/README.md",
+    "/examples/**",
+    "/src/**",
+    "/tests/**",
+]
+
+[dependencies]
+# The official MCP SDK: protocol revisions 2024-11-05 through
+# 2026-07-28, stdio and streamable HTTP. The floor is the highest any
+# of the servers this crate was extracted from asks for (oxml-mcp).
+rmcp = { version = "3.6", features = ["server", "transport-io", "transport-streamable-http-server"] }
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time", "io-std"] }
+tokio-util = "0.7"
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "query"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+# The client half of the SDK, so the tests can
+# hold a real session against a small server through a pipe.
+rmcp = { version = "3.6", features = ["client"] }
+schemars = "1"
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "io-util", "time"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+unreachable_pub = "deny"
+unused_results = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# The complexity ceilings of ~/Code/AGENTS.md section 0, enforced by
+# clippy where it can (thresholds in clippy.toml); cyclomatic and
+# Halstead are measured by `make complexity`.
+cognitive_complexity = "warn"
+too_many_lines = "warn"
+
+[package.metadata.docs.rs]
+all-features = true
