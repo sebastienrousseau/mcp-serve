@@ -13,6 +13,9 @@ Origin and Content-Type guard, a session cap, a per-line stdio cap, an
 opt-in per-call timeout and the tool-result helper.
 """
 readme = "README.md"
+repository = "https://github.com/sebastienrousseau/mcp-serve"
+homepage = "https://github.com/sebastienrousseau/mcp-serve"
+documentation = "https://docs.rs/mcp-serve"
 keywords = ["mcp", "rmcp", "server", "transport", "sse"]
 categories = ["network-programming", "command-line-interface"]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
