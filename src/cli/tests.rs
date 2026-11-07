@@ -298,3 +298,92 @@ fn a_shared_flag_keeps_its_shared_meaning() {
     assert_eq!(options.port, 9);
     assert_eq!(greedy, Greedy(None));
 }
+
+// --- Switches: server flags that take no value ------------------------------
+
+/// A server with one value-taking flag and two switches, one of which
+/// tries to take over a shared flag.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Switchy {
+    root: Option<String>,
+    dry_run: bool,
+    verbose: bool,
+}
+
+impl ServerFlags for Switchy {
+    const NAMES: &'static [&'static str] = &["--root"];
+    const SWITCHES: &'static [&'static str] =
+        &["--dry-run", "--verbose", "--host"];
+    const SYNOPSIS: &'static str = "[--root <dir>] [--dry-run] [--verbose]";
+    const HELP: &'static str = "\x20 --root <dir>        a directory\n\
+                                \x20 --dry-run           change nothing\n\
+                                \x20 --verbose           say more\n";
+
+    fn set(&mut self, _flag: &str, value: String) -> Result<(), String> {
+        self.root = Some(value);
+        Ok(())
+    }
+
+    fn set_switch(&mut self, flag: &str) -> Result<(), String> {
+        match flag {
+            "--dry-run" => self.dry_run = true,
+            "--verbose" => self.verbose = true,
+            other => return Err(format!("not a switch: {other}")),
+        }
+        Ok(())
+    }
+}
+
+#[test]
+fn a_switch_takes_no_value_and_leaves_the_next_argument_alone() {
+    let parsed =
+        parse_with::<Switchy, _>(["--dry-run", "--root", "/srv", "--verbose"]);
+    let want = Switchy {
+        root: Some("/srv".to_owned()),
+        dry_run: true,
+        verbose: true,
+    };
+    assert_eq!(parsed, Ok(Command::Serve(Options::default(), want)));
+    // The argument after a switch is read as a flag of its own.
+    assert_eq!(
+        parse_with::<Switchy, _>(["--dry-run", "--help"]),
+        Ok(Command::Help)
+    );
+    assert!(
+        parse_with::<Switchy, _>(["--dry-run", "yes"])
+            .is_err_and(|e| e.contains("`yes`"))
+    );
+}
+
+#[test]
+fn a_switch_given_a_value_is_a_usage_error() {
+    for arg in ["--dry-run=yes", "--dry-run=", "--verbose=true"] {
+        assert!(
+            parse_with::<Switchy, _>([arg])
+                .is_err_and(|e| e.contains("takes no value")),
+            "{arg}"
+        );
+    }
+}
+
+#[test]
+fn a_switch_is_only_known_to_the_server_that_declares_it() {
+    assert!(parse(["--dry-run"]).is_err_and(|e| e.contains("--dry-run")));
+    assert!(
+        parse_with::<Yaml, _>(["--dry-run"])
+            .is_err_and(|e| e.contains("--dry-run"))
+    );
+    let mut flags = NoFlags;
+    assert!(flags.set_switch("--dry-run").is_err());
+}
+
+#[test]
+fn a_shared_flag_listed_as_a_switch_keeps_its_value() {
+    let Ok(Command::Serve(options, flags)) =
+        parse_with::<Switchy, _>(["--host", "::1"])
+    else {
+        panic!("expected serve");
+    };
+    assert_eq!(options.host, "::1");
+    assert_eq!(flags, Switchy::default());
+}

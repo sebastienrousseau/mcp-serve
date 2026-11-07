@@ -85,10 +85,13 @@ impl Default for Options {
 ///
 /// Every flag named in [`NAMES`](Self::NAMES) takes one value, given
 /// as `--flag value` or `--flag=value`, which is handed to
-/// [`set`](Self::set). After the whole command line has been read,
-/// [`validate`](Self::validate) may check or resolve the values (a
-/// directory that must exist, say); an error there is a usage error,
-/// reported before anything is served.
+/// [`set`](Self::set). Every flag named in [`SWITCHES`](Self::SWITCHES)
+/// takes none: `--flag` alone calls [`set_switch`](Self::set_switch),
+/// and `--flag=value` is a usage error. A shared flag keeps its shared
+/// meaning whichever list names it. After the whole command line has
+/// been read, [`validate`](Self::validate) may check or resolve the
+/// values (a directory that must exist, say); an error there is a usage
+/// error, reported before anything is served.
 ///
 /// A server with no flags of its own uses [`NoFlags`].
 ///
@@ -100,37 +103,52 @@ impl Default for Options {
 /// #[derive(Debug, Default, PartialEq)]
 /// struct Flags {
 ///     root: Option<String>,
+///     read_only: bool,
 /// }
 ///
 /// impl ServerFlags for Flags {
 ///     const NAMES: &'static [&'static str] = &["--root"];
-///     const SYNOPSIS: &'static str = "[--root <dir>]";
+///     const SWITCHES: &'static [&'static str] = &["--read-only"];
+///     const SYNOPSIS: &'static str = "[--root <dir>] [--read-only]";
 ///     const HELP: &'static str =
-///         "  --root <dir>        directory the tools may use\n";
+///         "  --root <dir>        directory the tools may use\n  \
+///          --read-only         refuse every write\n";
 ///
 ///     fn set(&mut self, _flag: &str, value: String) -> Result<(), String> {
 ///         self.root = Some(value);
 ///         Ok(())
 ///     }
+///
+///     fn set_switch(&mut self, _flag: &str) -> Result<(), String> {
+///         self.read_only = true;
+///         Ok(())
+///     }
 /// }
 ///
 /// let Ok(Command::Serve(_, flags)) =
-///     parse_with::<Flags, _>(["--root=/srv"])
+///     parse_with::<Flags, _>(["--read-only", "--root=/srv"])
 /// else {
 ///     panic!("expected a serve command");
 /// };
 /// assert_eq!(flags.root.as_deref(), Some("/srv"));
+/// assert!(flags.read_only);
+/// assert!(parse_with::<Flags, _>(["--read-only=no"]).is_err());
 /// ```
 pub trait ServerFlags: Default + Send + Sync + 'static {
-    /// The flags this server adds, each spelt with its leading `--`.
+    /// The flags this server adds that take a value, each spelt with its
+    /// leading `--`.
     const NAMES: &'static [&'static str];
     /// What the flags add to the usage line, e.g.
-    /// `[--root <dir>] [--profile <strict|standard>]`. Empty for none.
+    /// `[--root <dir>] [--profile <strict|standard>] [--dry-run]`. Empty
+    /// for none.
     const SYNOPSIS: &'static str;
     /// The option lines the flags add to `--help`, each ending in a
     /// newline and indented like the shared ones (two spaces, the
     /// description in column 23). Empty for none.
     const HELP: &'static str;
+    /// The flags this server adds that take no value (`--dry-run`),
+    /// each spelt with its leading `--`. Empty unless overridden.
+    const SWITCHES: &'static [&'static str] = &[];
 
     /// Take `value` for `flag`, one of [`NAMES`](Self::NAMES).
     ///
@@ -139,6 +157,19 @@ pub trait ServerFlags: Default + Send + Sync + 'static {
     /// The value does not parse; the message is shown with the usage
     /// text.
     fn set(&mut self, flag: &str, value: String) -> Result<(), String>;
+
+    /// Note that `flag`, one of [`SWITCHES`](Self::SWITCHES), was given.
+    ///
+    /// The default refuses every flag, which is right for a server
+    /// that declares no switches.
+    ///
+    /// # Errors
+    ///
+    /// The switch cannot be taken; the message is shown with the usage
+    /// text.
+    fn set_switch(&mut self, flag: &str) -> Result<(), String> {
+        Err(unknown(flag))
+    }
 
     /// Check or resolve the values once the command line is read.
     ///
@@ -269,12 +300,12 @@ where
 /// `--help` and `--version` win over everything after them; an
 /// unknown flag fails before anything after it is read. A flag that
 /// takes a value reads the next argument as that value, whatever it
-/// looks like.
+/// looks like; a switch reads nothing after it.
 ///
 /// # Errors
 ///
 /// A flag that is unknown, missing its value, or given a value that
-/// does not parse. The message says which.
+/// does not parse, and a switch given a value. The message says which.
 pub fn parse_with<X, I>(args: I) -> Result<Command<X>, String>
 where
     X: ServerFlags,
@@ -289,6 +320,9 @@ where
         match flag.as_str() {
             "--help" | "-h" => return Ok(Command::Help),
             "--version" | "-V" => return Ok(Command::Version),
+            other if is_switch::<X>(other) => {
+                take_switch(&mut flags, other, inline.is_some())?;
+            }
             other => {
                 let value = flag_value::<X>(other, inline, &mut args)?;
                 apply(&mut options, &mut flags, other, value)?;
@@ -305,6 +339,25 @@ fn split_flag(arg: String) -> (String, Option<String>) {
         Some((flag, value)) => (flag.to_owned(), Some(value.to_owned())),
         None => (arg, None),
     }
+}
+
+/// Whether `flag` is one of the server's switches. A shared flag is
+/// never a switch, whatever the server declares.
+fn is_switch<X: ServerFlags>(flag: &str) -> bool {
+    X::SWITCHES.contains(&flag) && !SHARED_FLAGS.contains(&flag)
+}
+
+/// Hand a switch to the server; `--switch=value` is refused rather
+/// than read as true or false.
+fn take_switch<X: ServerFlags>(
+    flags: &mut X,
+    flag: &str,
+    has_value: bool,
+) -> Result<(), String> {
+    if has_value {
+        return Err(format!("{flag} takes no value"));
+    }
+    flags.set_switch(flag)
 }
 
 /// The value of a known `flag`, from its inline value or else the next
