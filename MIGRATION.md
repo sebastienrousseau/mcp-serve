@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
+
 # Migrating the servers to mcp-serve
 
 Three servers carry their own copy of the transport module: about 1,300
@@ -15,16 +17,25 @@ Read against these trees:
 | rlg (`crates/rlg-mcp`) | `feat/v0.0.18` | `7d8b16b` (plus uncommitted version bumps) | 0.0.18 |
 
 None of the server repositories has been changed. `mcp-serve` is not
-published, so each step below assumes it is reachable as a dependency,
-either from crates.io once published or as a `path`/`git` dependency in
-the meantime. That choice is the maintainer's.
+on crates.io yet, so until it is published every server takes it as a
+git dependency on
+[github.com/sebastienrousseau/mcp-serve](https://github.com/sebastienrousseau/mcp-serve),
+pinned to the commit it was tested against.
 
 ## What every server gets
 
 ```toml
 [dependencies]
-mcp-serve = "0.0.1"
+# Until mcp-serve is on crates.io. `rev` is the full commit hash on
+# mcp-serve's `main` the server was tested against.
+mcp-serve = { git = "https://github.com/sebastienrousseau/mcp-serve", rev = "<commit>" }
 ```
+
+A server whose `deny.toml` has `unknown-git = "deny"` also lists the
+repository under `[sources] allow-git`. Once the crate is published the
+line becomes `mcp-serve = "0.0.1"` and the `allow-git` entry goes; a
+git dependency cannot be published to crates.io, so the server cannot
+publish its own release until then.
 
 | Copy in the server | Replacement |
 | :--- | :--- |

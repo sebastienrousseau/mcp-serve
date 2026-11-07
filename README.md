@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/sebastienrousseau/mcp-serve/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/mcp-serve/ci.yml?style=for-the-badge&logo=github" alt="Build" height="28" /></a>
   <a href="LICENSE-MIT"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" height="28" /></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/rustc-1.89%2B-93450a.svg?style=for-the-badge&logo=rust" alt="Minimum Rust 1.89" height="28" /></a>
 </p>
@@ -21,7 +22,7 @@ prints.
 
 **Getting started**
 
-- [Install](#install) — a path or git dependency until the crate is published
+- [Install](#install) — a git dependency until the crate is published
 - [Requirements](#requirements) — toolchain floor, platforms
 - [Quick Start](#quick-start) — a whole server `main` in one call
 
@@ -55,12 +56,15 @@ prints.
 
 ```toml
 [dependencies]
-mcp-serve = { path = "../mcp-serve" }
+mcp-serve = { git = "https://github.com/sebastienrousseau/mcp-serve", rev = "<commit>" }
 ```
 
-The crate is not on crates.io and has no public repository yet, so it is
-reached by path from a sibling checkout. Once published, the line becomes
-`mcp-serve = "0.0.1"`.
+The crate is not on crates.io yet, so it is a git dependency pinned to a
+full commit hash on `main`. A git dependency cannot be published, so a
+server that depends on it cannot publish its own release until this
+crate is on crates.io; then the line becomes `mcp-serve = "0.0.1"`.
+[`MIGRATION.md`](MIGRATION.md) has the `cargo deny` entry it needs
+meanwhile.
 
 ---
 
@@ -131,7 +135,7 @@ server, the code that goes and the call that replaces it.
 | :--- | :--- | :--- |
 | Entry point | `serve_main`, `serve_main_with`: command line to exit status | Tested |
 | Command line | `--transport`, `--host`, `--port`, `--max-sessions`, `--help`, `--version`, `--flag=value` | Tested |
-| Server flags | `ServerFlags`: value-taking flags, listed in `--help`, validated before serving | Tested |
+| Server flags | `ServerFlags`: value-taking flags and switches (`--dry-run`), listed in `--help`, validated before serving | Tested |
 | Stdio | SDK framing over `BoundedLines`, 16 MiB per line | Tested |
 | Streamable HTTP | MCP 2025-11-25 sessions and 2026-07-28 stateless requests on `/mcp` | Tested |
 | Legacy HTTP+SSE | MCP 2024-11-05 on `/sse` and `/messages/` | Tested |
@@ -220,9 +224,10 @@ address is printed to stderr, so stdout stays free for stdio.
 - **Your server is not built on `rmcp`.** The crate serves an
   `rmcp::ServerHandler`; a hand-rolled JSON-RPC loop has to be ported
   first.
-- **You need flags without values, or to change a shared flag.**
-  `ServerFlags` adds value-taking flags only, and the shared flags
-  always keep their shared meaning.
+- **You need to change a shared flag, or a richer command line.**
+  The shared flags always keep their shared meaning. `ServerFlags`
+  adds value-taking flags and switches only: no short forms, no
+  `--no-` negation, no repeated values collected into a list.
 - **Dependency weight matters more than HTTP.** The HTTP transports bring
   `axum` and `rmcp`'s HTTP server: about 120 crates in the lockfile.
 
@@ -242,7 +247,13 @@ cyclomatic 10, cognitive 15, Halstead difficulty 30 and 60 lines, and every
 file to 500 lines, measured with `rust-code-analysis-cli`; there is no
 baseline because nothing is over. On macOS 27, Rust 1.89's build scripts
 fail to link against the 27.x SDK; `make msrv SDKROOT=<a MacOSX26 SDK>`
-works around it locally. There is no CI yet: the crate has no remote.
+works around it locally.
+
+CI (`.github/workflows/ci.yml`) runs on every pull request and on
+`main`: format, clippy, tests on Linux, macOS and Windows, and
+`cargo audit` through the shared `rust-ci.yml` workflow, plus
+`cargo deny`, the complexity ceilings, the MSRV build, docs with
+warnings denied, and a sign-off check on every commit.
 
 ---
 
@@ -259,8 +270,8 @@ works around it locally. There is no CI yet: the crate has no remote.
 - `cargo deny` (licences, advisories, sources) and `cargo audit` run in
   `make check`.
 
-There is no `SECURITY.md` yet. Until there is, report a vulnerability
-privately to the maintainer rather than in a public issue.
+Report a vulnerability privately, as [`SECURITY.md`](SECURITY.md)
+describes, never in a public issue.
 
 ---
 
@@ -270,6 +281,9 @@ privately to the maintainer rather than in a public issue.
 - [`MIGRATION.md`](MIGRATION.md): moving noyalib-mcp, oxml-mcp and
   rlg-mcp onto the crate.
 - [`CHANGELOG.md`](CHANGELOG.md): what each version changed.
+- [`SECURITY.md`](SECURITY.md): reporting a vulnerability, threat model.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) and
+  [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ---
 
