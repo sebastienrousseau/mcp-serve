@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# CI: the shared Rust pipeline (fmt, clippy, tests on Linux, macOS and
+# Windows, cargo audit) from sebastienrousseau/pipelines, plus the rest
+# of `make check` (deny, complexity, MSRV, docs) and a sign-off check.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # No branch filter, so a pull request into any base gets its checks.
+  # `push` stays on `main` so a branch does not build twice.
+  pull_request:
+
+# Least privilege: every job only reads the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  ci:
+    name: Rust CI
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@0e32d48f9ec5e8b684eb3fdd666c66e728eb9864 # main 2026-11-07
+    with:
+      rust-version: stable
+      run-clippy: true
+      run-fmt: true
+      run-audit: true
+      run-coverage: false
+      run-cross-platform: true
+
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check
+          arguments: --locked
+
+  complexity:
+    name: Complexity ceilings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Install rust-code-analysis-cli
+        run: cargo install rust-code-analysis-cli --version 0.0.25 --locked
+      - run: python3 scripts/complexity.py
+
+  msrv:
+    name: MSRV (1.89.0)
+    runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: 1.89.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.89.0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: The MSRV toolchain is the one in use
+        run: rustc --version | grep -F 'rustc 1.89.0'
+      - run: cargo check --all-targets --all-features --locked
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo doc --no-deps --all-features
+      - run: cargo test --doc --all-features
+
+  dco:
+    name: DCO sign-off
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit must carry a Signed-off-by
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          fail=0
+          for sha in $(git rev-list "$BASE..$HEAD"); do
+            author="$(git log -1 --format='%an <%ae>' "$sha")"
+            # Bots cannot sign off; Dependabot updates are exempt.
+            case "$author" in
+              *"[bot]"*|*dependabot*) continue ;;
+            esac
+            if ! git log -1 --format='%B' "$sha" \
+              | grep -qi '^Signed-off-by: .\+ <.\+@.\+>'; then
+              echo "::error::$(git log -1 --format='%h %s' "$sha") has no Signed-off-by"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "Sign off with: git commit -s. See DCO for what it certifies."
+            exit 1
+          fi
+          echo "every commit is signed off"
