@@ -8,7 +8,7 @@ follow the `0.0.x` increment policy of the repositories it serves.
 
 ## [Unreleased]
 
-## [0.0.1]
+## [0.0.1] - 2026-11-07
 
 ### Added
 
@@ -37,3 +37,6 @@ Extracted from the transport modules of noyalib-mcp 0.0.58 (`main`),
 oxml-mcp 0.0.16 (`feat/v0.0.16`) and rlg-mcp 0.0.18 (`feat/v0.0.18`);
 `MIGRATION.md` says what each server drops and which behaviour
 differences were resolved, and how.
+
+[Unreleased]: https://github.com/sebastienrousseau/mcp-serve/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/sebastienrousseau/mcp-serve/releases/tag/v0.0.1
