@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 # cargo-deny configuration.
 #
 # The licence list is what the resolved tree needs and nothing more:

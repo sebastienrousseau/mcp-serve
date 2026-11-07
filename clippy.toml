@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 # Ceilings from ~/Code/AGENTS.md section 0.
 cognitive-complexity-threshold = 15
 too-many-lines-threshold = 60
