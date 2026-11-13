@@ -10,12 +10,13 @@
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock,
     Implementation, ListToolsResult, PaginatedRequestParams,
-    ServerCapabilities, ServerConfig, Tool,
+    ServerCapabilities, ServerConfig, Tool, ToolAnnotations,
 };
 use rmcp::service::{MaybeSendFuture, RequestContext};
 use rmcp::{ErrorData, RoleServer, ServerHandler};
 use serde_json::{Value, json};
 use std::future::{Future, ready};
+use std::sync::Arc;
 
 /// The name the server introduces itself by.
 pub(crate) const NAME: &str = "echo-mcp";
@@ -28,13 +29,43 @@ impl Echo {
     fn tool() -> Tool {
         let schema = json!({
             "type": "object",
-            "properties": {"text": {"type": "string"}},
-            "required": ["text"]
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Text string echoed back verbatim.",
+                    "minLength": 1
+                }
+            },
+            "required": ["text"],
+            "additionalProperties": false
         });
         let Value::Object(schema) = schema else {
             unreachable!("a JSON object literal")
         };
+        let output_schema = json!({
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "Echoed text."
+                }
+            },
+            "required": ["text"],
+            "additionalProperties": false
+        });
+        let Value::Object(output_schema) = output_schema else {
+            unreachable!("a JSON object literal")
+        };
         Tool::new("echo", "Answer with the text sent", schema)
+            .with_title("Echo text")
+            .with_annotations(
+                ToolAnnotations::new()
+                    .read_only(true)
+                    .destructive(false)
+                    .idempotent(true)
+                    .open_world(false),
+            )
+            .with_raw_output_schema(Arc::new(output_schema))
     }
 }
 
@@ -75,7 +106,10 @@ impl Echo {
             .and_then(Value::as_str);
         match (request.name.as_ref(), text) {
             ("echo", Some(text)) => {
-                CallToolResult::success(vec![ContentBlock::text(text)])
+                let mut res =
+                    CallToolResult::success(vec![ContentBlock::text(text)]);
+                res.structured_content = Some(json!({ "text": text }));
+                res
             }
             ("echo", None) => CallToolResult::error(vec![ContentBlock::text(
                 "echo needs a `text` argument",
