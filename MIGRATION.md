@@ -33,7 +33,7 @@ mcp-serve = { git = "https://github.com/sebastienrousseau/mcp-serve", rev = "<co
 
 A server whose `deny.toml` has `unknown-git = "deny"` also lists the
 repository under `[sources] allow-git`. Once the crate is published the
-line becomes `mcp-serve = "0.0.1"` and the `allow-git` entry goes; a
+line becomes `mcp-serve = "0.0.2"` and the `allow-git` entry goes; a
 git dependency cannot be published to crates.io, so the server cannot
 publish its own release until then.
 
