@@ -8,6 +8,13 @@ follow the `0.0.x` increment policy of the repositories it serves.
 
 ## [Unreleased]
 
+### Changed
+
+- `examples/greeter` and the shared `echo` test server now declare parameter
+  descriptions and constraints, read-only tool annotations (`readOnlyHint`,
+  `destructiveHint`, `idempotentHint`, `openWorldHint`) and `outputSchema`
+  alongside `structuredContent`.
+
 ## [0.0.1] - 2026-11-07
 
 ### Added

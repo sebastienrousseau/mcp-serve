@@ -93,6 +93,28 @@ async fn every_request_in_a_session_is_answered() {
 }
 
 #[tokio::test]
+async fn tools_round_trip_annotations_output_schema_and_structured_content() {
+    let replies = converse(&[
+        INITIALIZE,
+        INITIALIZED,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"echo","arguments":{"text":"Dune"}}}"#,
+    ])
+    .await;
+    let tool = &by_id(&replies, 2)["result"]["tools"][0];
+    assert_eq!(tool["annotations"]["readOnlyHint"], true, "{tool}");
+    assert_eq!(tool["annotations"]["destructiveHint"], false, "{tool}");
+    assert_eq!(tool["annotations"]["idempotentHint"], true, "{tool}");
+    assert_eq!(tool["annotations"]["openWorldHint"], false, "{tool}");
+    assert_eq!(
+        tool["outputSchema"]["properties"]["text"]["type"], "string",
+        "{tool}"
+    );
+    let call = &by_id(&replies, 3)["result"];
+    assert_eq!(call["structuredContent"]["text"], "Dune", "{call}");
+}
+
+#[tokio::test]
 async fn a_stateless_client_needs_no_handshake() {
     let replies = converse(&[
         r#"{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}"#,
