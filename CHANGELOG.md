@@ -8,12 +8,21 @@ follow the `0.0.x` increment policy of the repositories it serves.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-11-13
+
+### Added
+
+- Human-readable tool titles, parameter descriptions and length constraints,
+  read-only behaviour annotations (`readOnlyHint`, `destructiveHint`,
+  `idempotentHint`, `openWorldHint`) and `outputSchema` definitions on
+  `examples/greeter` and the shared `echo` test server, plus round-trip unit
+  and transport tests covering annotations, schemas and `structuredContent`.
+
 ### Changed
 
-- `examples/greeter` and the shared `echo` test server now declare parameter
-  descriptions and constraints, read-only tool annotations (`readOnlyHint`,
-  `destructiveHint`, `idempotentHint`, `openWorldHint`) and `outputSchema`
-  alongside `structuredContent`.
+- `examples/greeter` now rejects unknown tool names explicitly and requires a
+  non-empty `name` string argument, and `tests/support/echo` emits
+  `structuredContent` alongside text content on successful calls.
 
 ## [0.0.1] - 2026-11-07
 
@@ -45,5 +54,6 @@ oxml-mcp 0.0.16 (`feat/v0.0.16`) and rlg-mcp 0.0.18 (`feat/v0.0.18`);
 `MIGRATION.md` says what each server drops and which behaviour
 differences were resolved, and how.
 
-[Unreleased]: https://github.com/sebastienrousseau/mcp-serve/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/sebastienrousseau/mcp-serve/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/sebastienrousseau/mcp-serve/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/sebastienrousseau/mcp-serve/releases/tag/v0.0.1

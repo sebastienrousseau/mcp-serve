@@ -62,7 +62,7 @@ mcp-serve = { git = "https://github.com/sebastienrousseau/mcp-serve", rev = "<co
 The crate is not on crates.io yet, so it is a git dependency pinned to a
 full commit hash on `main`. A git dependency cannot be published, so a
 server that depends on it cannot publish its own release until this
-crate is on crates.io; then the line becomes `mcp-serve = "0.0.1"`.
+crate is on crates.io; then the line becomes `mcp-serve = "0.0.2"`.
 [`MIGRATION.md`](MIGRATION.md) has the `cargo deny` entry it needs
 meanwhile.
 
