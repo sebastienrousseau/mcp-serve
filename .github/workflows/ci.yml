@@ -28,7 +28,7 @@ env:
 jobs:
   ci:
     name: Rust CI
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@0e32d48f9ec5e8b684eb3fdd666c66e728eb9864 # main 2026-11-07
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@3f9978aba68e59da1bd5a58d12fbaf142679fe5f # main 2026-11-07
     with:
       rust-version: stable
       run-clippy: true
